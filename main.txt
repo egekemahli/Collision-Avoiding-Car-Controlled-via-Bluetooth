@@ -1,0 +1,551 @@
+//To implement the project on your own you need to add these library into your project.
+//Then you need to use this code file as a main file.
+
+#include "mbed.h"
+#include "N5110.h"
+#include "Servo.h"
+
+Servo myservo(PTE31); 
+//LCD and dist Pins
+Timer sonar;
+Timer sonar2;
+DigitalOut trigger1(PTC12);
+DigitalIn  echo1(PTC13);
+DigitalOut trigger2(PTA4);
+DigitalIn  echo2(PTA12);
+//Car Pins
+Serial blue(D14, D15);
+DigitalOut led3(LED3);
+DigitalOut led2(LED2);
+DigitalOut led1(LED1);
+//driver Enable Pins
+DigitalOut int1(PTE20);
+DigitalOut int2(PTE21);
+DigitalOut int3(PTE22);
+DigitalOut int4(PTE23);
+DigitalOut enb(PTD7);
+
+int input = 0;
+int x = 0;
+int y = 0;
+bool on = false;
+bool arka= false;
+bool sag= false;
+bool sol=false;
+bool onarka = false;
+bool sagsol = false;
+//Pin LCD
+N5110 lcd(PTD0,PTD3,PTD2,PTC6,PTC5,PTC1);
+// PINs in order : sce, rst , dc , din, sclk, bl
+
+unsigned int distance1 = 0;
+unsigned int distance2 = 0;
+unsigned int correction = 0;
+unsigned int correction2 = 0;
+//Cordinates for the draw methods
+unsigned int x11 = 0;
+unsigned int y11 = 0;
+unsigned int x12 = 0;
+unsigned int y12 = 0;
+unsigned int x21 = 0;
+unsigned int y21 = 0;
+unsigned int x22 = 0;
+unsigned int y22 = 0;
+unsigned int x31 = 0;
+unsigned int y31 = 0;
+unsigned int x32 = 0;
+unsigned int y32 = 0;
+unsigned int x41 = 0;
+unsigned int y41 = 0;
+unsigned int x42 = 0;
+unsigned int y42 = 0;
+unsigned int x51 = 0;
+unsigned int y51 = 0;
+unsigned int x52 = 0;
+unsigned int y52 = 0;
+unsigned int x61 = 0;
+unsigned int y61 = 0;
+unsigned int x62 = 0;
+unsigned int y62 = 0;
+unsigned int x71 = 0;
+unsigned int y71 = 0;
+unsigned int x72 = 0;
+unsigned int y72 = 0;
+unsigned int x81 = 0;
+unsigned int y81 = 0;
+unsigned int x82 = 0;
+unsigned int y82 = 0;
+
+  
+//Methods
+void move2(int info){
+        x = (info & 0x0F);
+        y = (info & 0xF0);
+        y = y/16;
+        if (x < 3 && y<11 && y>3){ //sari sol
+            if(sag == true  ){
+                myservo = 0.05;
+                
+                led1 = 0;//led 1kırmızı
+                led2 = 1;
+                led3=1;
+                int1 = 0;
+                int2 = 0;
+                int3 = 0;
+                int4 = 0;
+                sagsol = true;
+                onarka = false;
+            }
+            else
+            {   
+                myservo = 0.05;
+                
+                led1=1;
+                led2=0; //led 2 yeşil
+                led3=1;
+                int1 = 1; 
+                int2 = 0; 
+                int3 = 0;
+                int4 = 1;
+                sagsol = true;
+                onarka = false;
+            }      
+        }
+        else if(x >11 && y<11 && y>3 ) { //yesil sað
+            if(sol == true  ){
+                myservo = 0.05;
+                
+                led1=0;
+                led2=1;
+                led3=1;
+                int1 = 0;
+                int2 = 0;
+                int3 = 0;
+                int4 = 0;
+                sagsol = true;
+                onarka = false;
+            }
+            else
+            {
+                myservo = 0.05;
+                led1=1;
+                led2=0;
+                led3=1;
+                int1 = 0; 
+                int2 = 1; 
+                int3 = 1;
+                int4 = 0;             
+                sagsol = true;
+                onarka = false;
+            }
+            
+        }
+        else if (y >11 && x<11 && x>3) { //kýrmýzý ileri
+            if(on == true  )
+            {
+            myservo = 0.5; 
+            led1=0;
+            led2=1;
+            led3=1;
+            int1 = 0;
+            int2 = 0;
+            int3 = 0;
+            int4 = 0;
+            onarka = true;    
+            sagsol = false;
+            }
+            else{
+            myservo = 0.5;
+            led1=1;
+            led2=0;
+            led3=1;
+            int1 = 1; 
+            int2 = 0; 
+            int3 = 1;
+            int4 = 0;
+            onarka = true;
+            sagsol = false;
+            }
+        }
+        else if (y <3 && x<11 && x>3){ 
+            if(arka == true  )
+            {
+                myservo = 0.5;
+                led1 = 0;
+                led2= 1;
+                led3=1;
+                int1 = 0;
+                int2 = 0;
+                int3 = 0;
+                int4 = 0;  
+                onarka = true;
+                sagsol = false;
+            }
+            else
+            {
+            myservo = 0.5;
+            led1=1;
+            led2=0;
+            led3=1;
+            
+            int1 = 0; 
+            int2 = 1; 
+            int3 = 0;
+            int4 = 1;
+            onarka = true;
+            sagsol = false;
+            }
+        }
+        else{
+            led1 = 1;
+            led2 = 1;
+            led3 = 0;
+            int1 = 0; 
+            int2 = 0; 
+            int3 = 0;
+            int4 = 0;
+            onarka = false;
+            sagsol = false;
+        }
+   
+    } 
+
+void  calculatedist1(){
+        sonar.reset();
+        // measure actual software polling timer delays
+        // delay used later in time correction
+        // start timer
+        sonar.start();
+        // min software polling delay to read echo pin
+        while (echo1==2) {};
+        // stop timer
+        sonar.stop();
+        // read timer
+        correction = sonar.read_us();
+        //Loop to read Sonar distance values, scale, and print
+        // trigger sonar to send a ping
+        trigger1 = 1;
+        sonar.reset();
+        wait_us(10.0);
+        trigger1 = 0;
+        //wait for echo high
+        while (echo1==0) {};
+        //echo high, so start timer
+        sonar.start();
+        //wait for echo low
+        while (echo1==1) {};
+         //stop timer and read value
+        sonar.stop();
+        //subtract software overhead timer delay and scale to cm
+        distance1 = (sonar.read_us()-correction)/58.0;
+        //wait so that any echo(s) return before sending another ping
+        //wait(0.3);
+        if(distance1 > 72){
+            distance1 = 72;
+        }
+        //distance1= distance1/3;
+ }
+ void  calculatedist2(){
+   sonar2.reset();
+    sonar2.start();
+    while (echo2==2) {};
+        sonar2.stop();
+        correction = sonar2.read_us();
+        trigger2 = 1;
+        sonar2.reset();
+        wait_us(10.0);
+        trigger2 = 0;
+        while (echo2==0) {};
+        sonar2.start();
+        while (echo2==1) {};
+        sonar2.stop();
+        distance2 = (sonar2.read_us()-correction)/58.0;
+        if(distance2 > 72){
+            distance2 = 72;
+        }
+        //distance2= distance2/3;
+ }
+ 
+ 
+ 
+//Draw Methods Part 
+//Divide the 360 to 8 and named them like a clockwise
+void drawPart1(){
+     if (distance1 < 45 ){
+        on = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        on = false;
+     }
+     y11 = 24+(distance1*(100/92));
+     x12 = 42-(distance1*0.7);
+     y12 = 24+(distance1*0.7);
+}
+void drawPart2(){
+     if (distance1 < 45 ){
+        on = true;
+        sag = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        on = false;
+        sag = false;
+     }
+     x21 = 42-(distance1*(100/92));
+     x22 = 42-(distance1*0.7);
+     y22 = 24+(distance1*0.7);
+     
+}
+void drawPart3(){
+     if (distance1 < 45 ){
+        sag = true;
+        arka = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        sag = false;
+        arka = false;
+     }
+     x31 = 42-(distance1*(100/92));
+     x32 = 42-(distance1*0.7);
+     y32 = 24-(distance1*0.7);
+}
+void drawPart4(){
+     if (distance1 < 45 ){
+        arka = true;
+        sag = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        arka = false;
+        sag = false;
+     }
+     y41 = 24-(distance1*(100/92));
+     x42 = 42-(distance1*0.7);
+     y42 = 24-(distance1*0.7);
+}
+void drawPart5(){
+     if (distance2 < 45 ){
+        arka = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        arka = false;
+     }
+     y51 = 24-(distance2*(100/92));
+     x52 = 42+(distance2*0.7);
+     y52 = 24-(distance2*0.7);
+     
+}
+void drawPart6(){
+     if (distance2 < 45 ){
+        arka = true;
+        sol = true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        arka = false;
+        sol  =false;
+     }
+     x61 = 42+(distance2*(100/92));
+     x62 = 42+(distance2*0.7);
+     y62 = 24-(distance2*0.7);
+     
+}
+void drawPart7(){
+     if (distance2 < 45 ){
+        on = true;
+        sol= true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        on = false;
+        sol  =false;
+     }
+     x71 = 42+(distance2*(100/92));
+     x72 = 42+(distance2*0.7);
+     y72 = 24+(distance2*0.7);
+     
+}
+void drawPart8(){
+     if (distance2 < 45 ){
+        on=true;
+        sol=true;
+        int1 = 0; 
+        int2 = 0; 
+        int3 = 0;
+        int4 = 0;
+     }
+     else{
+        on = false;
+        sol= false;
+     }
+     y81 = 24+(distance2*(100/92));
+     x82 = 42+(distance2*0.7);
+     y82 = 24+(distance2*0.7);
+     
+}
+
+void startRadar(){ 
+    
+        lcd.clear();
+        lcd.drawLine(18, 24, 66, 24, 1);
+        lcd.drawLine(42, 0, 42, 48, 1);
+        lcd.drawCircle(42,24,24,FILL_TRANSPARENT); // big circle
+        lcd.drawCircle(42,24,5,FILL_TRANSPARENT); // inside circle
+        lcd.drawLine(25, 7, 59, 41, 1);  // line wihch is x=y
+        lcd.drawLine(25, 41, 59, 7, 1);  //line x=-y
+        lcd.refresh();   
+
+}
+void drawRadar(){ 
+        lcd.clear();
+        lcd.drawLine(18, 24, 66, 24, 1);
+        lcd.drawLine(42, 0, 42, 48, 1);
+        lcd.drawCircle(42,24,24,FILL_TRANSPARENT); // big circle
+        lcd.drawCircle(42,24,5,FILL_TRANSPARENT); // inside circle
+        lcd.drawLine(25, 7, 59, 41, 1);  // line wihch is x=y
+        lcd.drawLine(25, 41, 59, 7, 1);  //line x=-y
+        
+        lcd.drawLine(42,y11,x12,y12,1);//part1
+        lcd.drawLine(x21,24,x22,y22,1);//part2
+        lcd.drawLine(x31,24,x32,y32,1);//part3
+        lcd.drawLine(42,y41,x42,y42,1);//part4
+        lcd.drawLine(42,y51,x52,y52,1);//part5
+        lcd.drawLine(x61,24,x62,y62,1);//part6
+        lcd.drawLine(x71,24,x72,y72,1);//part7
+        lcd.drawLine(42,y81,x82,y82,1);//part8
+        
+        lcd.refresh();   
+}
+
+void scan(){
+    int myservos = int(100*myservo);
+
+    if( myservos >= 0 && myservos < 25){ 
+        if (myservos == 5){
+            calculatedist1();
+            calculatedist2();
+            drawPart4();
+            drawPart8();
+        }
+        
+    }
+    else if( myservos>= 25 && myservos < 50){ 
+        if (myservos == 25){
+            calculatedist1();
+            calculatedist2();
+           drawPart3();
+           drawPart7();
+        }
+        
+    }
+    else if( myservos>= 50 && myservos <75){ 
+        if (myservos == 50){
+             calculatedist1();
+             calculatedist2();
+            drawPart2();
+            drawPart6();
+        }
+        
+    }
+    else if(myservos>= 75 && myservos < 100) {
+        if (myservos == 75){
+            calculatedist1();
+            calculatedist2();
+            drawPart1();
+            drawPart5();  
+        }
+        
+    }
+    drawRadar(); 
+}
+
+
+
+void turnServo(){
+        myservo = 0.0;
+        while(true){ 
+      
+            for(float p=0; p<1.0; p += 0.01) {
+                myservo = p;
+                if(sagsol)
+                {
+                    p = 0.05;    
+                    myservo = p;
+                }
+                if(onarka)
+                {
+                    p = 0.50;   
+                    myservo = p; 
+                }
+                if(blue.readable() > 0)
+                {
+                    input = blue.getc();
+                    move2(input);
+                    scan();
+                }
+                wait(0.01);
+                //wait(0.005);
+                scan();
+            } 
+             for(float p = 1.0;p >0.0; p-= 0.01) {
+                myservo=  p;
+                if(sagsol)
+                {
+                    p = 0.05;
+                    myservo = p;    
+                }
+                if(onarka)
+                {
+                    p = 0.50;
+                    myservo = p;    
+                }
+                if(blue.readable() > 0)
+                {
+                    input = blue.getc();
+                     move2(input);
+                     scan();
+                }
+                wait(0.01);
+                //wait(0.005);
+                scan();
+             }
+           
+        }
+}
+int main() {
+    
+    lcd.init();
+    lcd.setContrast(0.5);
+    enb = 1;
+    blue.baud(9600);
+    led1 = 1;
+    led2 = 1;
+    led3 = 1;
+    while(1) {            
+       turnServo();
+    }
+}
